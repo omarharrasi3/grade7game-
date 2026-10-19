@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>من سيربح المليون؟</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: game-show stage — question + answer "lozenges" on a spotlit floor, prize ladder in a side column (overlay on phones) */
+:root{
+  color-scheme: dark;
+  --stage:#060a22;
+  --floor:#0d1546;
+  --panel:#111b57;
+  --panel-hi:#1c2a7a;
+  --line:#b8913f;
+  --gold:#f2cf73;
+  --ink:#eef0ff;
+  --muted:#9ba4d8;
+  --sel:#f08a24;
+  --sel-ink:#1a0d00;
+  --ok:#22a957;
+  --bad:#d23838;
+  --glow:#3a54d6;
+  --f-display:"Reem Kufi","Segoe UI","Geeza Pro","Noto Kufi Arabic",Tahoma,sans-serif;
+  --f-body:"Cairo","Segoe UI","Geeza Pro","Noto Sans Arabic",Tahoma,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  margin:0;background:var(--stage);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.6;
+  background-image:
+    radial-gradient(ellipse 70% 55% at 50% -5%, rgba(58,84,214,.45), transparent 70%),
+    repeating-radial-gradient(circle at 50% 120%, rgba(184,145,63,.06) 0 2px, transparent 2px 46px);
+  background-attachment:fixed;
+}
+button{font:inherit;color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-size:1.15rem;color:var(--gold)}
+.brand .dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:.8rem;background:radial-gradient(circle,#26338d,#0b1238)}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(184,145,63,.5);background:rgba(17,27,87,.7);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:.9rem}
+.chip:hover{border-color:var(--gold)}
+.chip:focus-visible,.btn:focus-visible,.life:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+
+/* ---------- start ---------- */
+.start{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:40px;align-items:center;padding-block:20px}
+.emblem{position:relative;aspect-ratio:1;max-width:min(420px,100%);margin-inline:auto;width:100%;display:grid;place-items:center}
+.emblem .ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--line);box-shadow:0 0 60px rgba(58,84,214,.5),inset 0 0 40px rgba(58,84,214,.35)}
+.emblem .ring:nth-child(2){inset:9%;border-color:rgba(242,207,115,.55)}
+.emblem .ring:nth-child(3){inset:18%;border-style:dashed;border-color:rgba(184,145,63,.5);animation:spin 60s linear infinite}
+.emblem .core{position:relative;text-align:center;background:radial-gradient(circle,#2a3aa3 0%,#0c1446 70%);border-radius:50%;width:64%;aspect-ratio:1;display:grid;place-content:center;border:3px solid var(--gold)}
+.emblem .q{font-family:var(--f-display);font-size:clamp(1.3rem,4vw,2.1rem);color:var(--gold);line-height:1.25}
+.emblem .amt{font-size:clamp(.8rem,2vw,1rem);color:var(--muted);letter-spacing:.15em;margin-top:6px;font-variant-numeric:tabular-nums}
+@keyframes spin{to{transform:rotate(360deg)}}
+.intro h1{font-family:var(--f-display);font-size:clamp(2rem,5vw,3.2rem);line-height:1.2;margin:0 0 6px;color:var(--gold);text-wrap:balance}
+.intro .sub{color:var(--muted);margin:0 0 22px;font-size:1.02rem}
+.rules{list-style:none;padding:0;margin:0 0 22px;display:grid;gap:10px}
+.rules li{display:flex;gap:12px;align-items:flex-start}
+.rules b{color:var(--gold);font-weight:700}
+.rules .ic{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:.75rem;color:var(--gold);margin-top:2px}
+.who{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:10px 12px;margin-bottom:16px;max-width:520px}
+.who label{display:flex;flex-direction:column;gap:4px;font-size:.9rem;color:var(--muted)}
+.who input,.who select{font:inherit;color:var(--ink);background:rgba(17,27,87,.8);border:1px solid rgba(184,145,63,.55);border-radius:10px;padding:10px 12px;width:100%}
+.who select option{background:var(--panel);color:var(--ink)}
+.who input:focus-visible,.who select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.who .err{grid-column:1/-1;margin:0;color:#ff9b9b;font-size:.9rem}
+.sent{margin:0;font-size:.92rem;color:var(--muted)}
+.sent.ok{color:#9ff0bd}.sent.no{color:#ff9b9b}
+.player{color:var(--gold);font-weight:700}
+.opts{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
+.toggle{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(155,164,216,.35);border-radius:10px;padding:8px 12px;cursor:pointer;user-select:none}
+.toggle input{accent-color:var(--sel);width:18px;height:18px}
+.btn{cursor:pointer;border:0;border-radius:999px;padding:12px 30px;font-weight:800;font-size:1.05rem;background:linear-gradient(180deg,#ffd982,#d9a440);color:#231500;box-shadow:0 6px 24px rgba(240,180,60,.25)}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.4;cursor:not-allowed;filter:none}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid rgba(155,164,216,.5);box-shadow:none}
+.btn.danger{background:linear-gradient(180deg,#ff7a6b,#c2352c);color:#fff}
+.best{color:var(--muted);font-size:.92rem;margin-top:14px;font-variant-numeric:tabular-nums}
+.best b{color:var(--gold)}
+
+/* ---------- game ---------- */
+.game{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:26px;align-items:start}
+.stage{display:flex;flex-direction:column;gap:18px;min-width:0}
+.hud{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.lifes{display:flex;gap:10px}
+.life{position:relative;width:66px;height:44px;border-radius:50%;border:2px solid var(--line);background:radial-gradient(circle at 50% 35%,#2b3ca8,#0b1240);cursor:pointer;display:grid;place-items:center;font-weight:800;font-size:.85rem;color:var(--ink)}
+.life svg{width:22px;height:22px;fill:currentColor}
+.life:hover:not(:disabled){box-shadow:0 0 16px rgba(242,207,115,.5)}
+.life:disabled{cursor:not-allowed;opacity:.55}
+.life.used::after{content:"";position:absolute;inset:6px 10px;background:linear-gradient(to top right,transparent 46%,var(--bad) 46% 54%,transparent 54%),linear-gradient(to top left,transparent 46%,var(--bad) 46% 54%,transparent 54%)}
+.hud-end{display:flex;align-items:center;gap:12px}
+.timer{position:relative;width:54px;height:54px}
+.timer svg{width:54px;height:54px;transform:rotate(-90deg)}
+.timer circle{fill:none;stroke-width:4}
+.timer .bg{stroke:rgba(155,164,216,.2)}
+.timer .fg{stroke:var(--gold);stroke-linecap:round;stroke-dasharray:150.8;transition:stroke-dashoffset .9s linear,stroke .3s}
+.timer.warn .fg{stroke:var(--bad)}
+.timer span{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-variant-numeric:tabular-nums}
+.ladderBtn{display:none}
+.meta{display:flex;justify-content:center;gap:8px 16px;flex-wrap:wrap;color:var(--muted);font-size:.95rem;font-variant-numeric:tabular-nums}
+.meta b{color:var(--gold)}
+
+.shape{--cut:22px;clip-path:polygon(var(--cut) 0,calc(100% - var(--cut)) 0,100% 50%,calc(100% - var(--cut)) 100%,var(--cut) 100%,0 50%)}
+.rail{position:relative}
+.rail::before{content:"";position:absolute;inset-inline:0;top:50%;height:2px;background:linear-gradient(90deg,transparent,var(--line) 12%,var(--line) 88%,transparent);z-index:0}
+.qbox{position:relative;z-index:1;margin-inline:auto;width:100%;background:var(--line);padding:2px;--cut:34px}
+.qbox .in{--cut:33px;background:linear-gradient(180deg,#18237a,#080e36);min-height:120px;display:grid;place-items:center;padding:18px 48px;text-align:center}
+#qtext{margin:0;font-size:clamp(1.08rem,2.3vw,1.45rem);font-weight:700;line-height:1.6;text-wrap:balance}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
+.answers .rail{display:contents}
+.ans{position:relative;z-index:1;border:0;padding:2px;background:var(--line);cursor:pointer;text-align:start;width:100%}
+.ans .in{display:flex;align-items:center;gap:10px;min-height:62px;padding:10px 30px;background:linear-gradient(180deg,#141f66,#091039);font-weight:600;font-size:1rem;line-height:1.5}
+.ans .k{color:var(--gold);font-weight:800;flex:none}
+.ans:hover:not(:disabled) .in{background:linear-gradient(180deg,#22319a,#101a5a)}
+.ans:focus-visible{background:#fff;outline:none}
+.ans:disabled{cursor:default}
+.ans.sel{background:var(--gold)}
+.ans.sel .in{background:linear-gradient(180deg,#ffa94a,#d26d10);color:var(--sel-ink)}
+.ans.sel .k{color:var(--sel-ink)}
+.ans.ok{background:#b8ffcf}
+.ans.ok .in{background:linear-gradient(180deg,#36cf72,#168a43);color:#fff}
+.ans.ok .k{color:#fff}
+.ans.flash .in{animation:blink .32s steps(2) 4}
+.ans.bad{background:#ffb3b3}
+.ans.bad .in{background:linear-gradient(180deg,#ec5252,#a51f1f);color:#fff}
+.ans.bad .k{color:#fff}
+.ans.gone .in>*{visibility:hidden}
+.ans.gone{opacity:.45}
+@keyframes blink{50%{filter:brightness(1.6)}}
+
+.actions{display:flex;flex-direction:column;align-items:center;gap:12px;min-height:80px}
+.feedback{margin:0;text-align:center;font-weight:700;font-size:1.05rem;text-wrap:balance}
+.feedback.good{color:#7ff0a8}.feedback.bad{color:#ff9b9b}
+.feedback small{display:block;font-weight:400;color:var(--muted);font-size:.9rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+
+.panel{position:relative;border:1px solid rgba(184,145,63,.55);background:rgba(13,21,70,.92);border-radius:14px;padding:16px 18px}
+.panel h3{margin:0 0 10px;font-family:var(--f-display);color:var(--gold);font-size:1.05rem}
+.panel .x{position:absolute;top:8px;inset-inline-end:10px;background:none;border:0;color:var(--muted);font-size:1.3rem;cursor:pointer;line-height:1}
+.bars{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:end;height:150px;padding-top:8px}
+.bar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px;font-variant-numeric:tabular-nums}
+.bar i{display:block;width:60%;max-width:46px;background:linear-gradient(180deg,var(--gold),var(--line));border-radius:4px 4px 0 0;height:0;transition:height .9s cubic-bezier(.2,.8,.2,1)}
+.bar .p{font-size:.85rem;font-weight:700}
+.bar .l{color:var(--gold);font-weight:800}
+.friend{margin:0;font-size:1.02rem}
+.friend b{color:var(--gold)}
+
+/* ladder */
+.ladder{border:1px solid rgba(184,145,63,.45);border-radius:16px;background:linear-gradient(180deg,rgba(17,27,87,.85),rgba(6,10,34,.9));padding:12px 10px}
+.ladder h2{margin:0 6px 8px;font-family:var(--f-display);font-size:1rem;color:var(--gold);display:flex;justify-content:space-between;align-items:center}
+.ladder h2 button{display:none;background:none;border:0;color:var(--muted);font-size:1.4rem;cursor:pointer}
+.ladder ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.ladder li{display:grid;grid-template-columns:28px 14px 1fr;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-variant-numeric:tabular-nums;font-size:.92rem;color:#d7dbf5}
+.ladder li .n{color:var(--muted);text-align:center}
+.ladder li .d{width:7px;height:7px;transform:rotate(45deg);background:transparent}
+.ladder li .v{text-align:end;font-weight:600;direction:ltr}
+.ladder li.safe{color:var(--gold)}
+.ladder li.safe .v{font-weight:800}
+.ladder li.done .d{background:var(--gold)}
+.ladder li.cur{background:linear-gradient(90deg,#ffa94a,#d26d10);color:var(--sel-ink)}
+.ladder li.cur .n{color:var(--sel-ink)}
+.ladder .note{margin:10px 6px 0;font-size:.8rem;color:var(--muted)}
+
+/* end */
+.end{max-width:760px;margin:0 auto;text-align:center;display:flex;flex-direction:column;gap:18px;align-items:center;padding-block:10px}
+.end h1{font-family:var(--f-display);color:var(--gold);font-size:clamp(1.8rem,5vw,2.8rem);margin:0;line-height:1.2;text-wrap:balance}
+.end .won{font-size:clamp(2.6rem,9vw,4.6rem);font-weight:800;line-height:1;color:#fff;text-shadow:0 0 30px rgba(242,207,115,.55);font-variant-numeric:tabular-nums;direction:ltr}
+.end .lead{margin:0;color:var(--muted)}
+.review{width:100%;text-align:start;display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.review li{display:grid;grid-template-columns:32px minmax(0,1fr);gap:10px;background:rgba(17,27,87,.65);border:1px solid rgba(155,164,216,.18);border-radius:12px;padding:10px 14px}
+.review .mk{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:.9rem}
+.review .y{background:var(--ok)}.review .nn{background:var(--bad)}.review .w{background:#5a6299}
+.review p{margin:0}
+.review .qq{font-weight:600}
+.review .aa{font-size:.9rem;color:var(--muted)}
+.review .aa b{color:#9ff0bd;font-weight:600}
+.review .aa s{color:#ffb0b0}
+
+[hidden]{display:none!important}
+
+@media (max-width:860px){
+  .game{grid-template-columns:1fr}
+  .ladderBtn{display:inline-flex}
+  .ladder{position:fixed;inset:0;z-index:20;border-radius:0;display:none;flex-direction:column;justify-content:center;padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));background:rgba(6,10,34,.97)}
+  .ladder.open{display:flex}
+  .ladder h2 button{display:block}
+  .ladder ol,.ladder h2,.ladder .note{width:100%;max-width:360px;margin-inline:auto}
+  .start{grid-template-columns:1fr;gap:24px}
+  .emblem{max-width:240px}
+}
+@media (max-width:620px){
+  .answers{grid-template-columns:1fr}
+  .qbox .in{padding:16px 30px;min-height:100px}
+  .qbox{--cut:22px}.qbox .in{--cut:21px}
+  .ans .in{min-height:54px;padding:8px 24px}
+  .shape{--cut:16px}
+  .life{width:56px;height:40px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+
+</head>
+<body>
+<div class="wrap" dir="rtl" lang="ar">
+  <header class="top">
+    <div class="brand"><span class="dot">؟</span>من سيربح المليون</div>
+    <button class="chip" id="soundBtn" type="button" aria-pressed="true">الصوت: يعمل</button>
+  </header>
+
+  <!-- START -->
+  <section id="screenStart" class="start">
+    <div class="intro">
+      <h1>من سيربح المليون؟</h1>
+      <p class="sub">مسابقة من كتاب الوحدة الثانية: «هل تذكر؟» والدرس 2-1 مقدمة في تصميم الرسوم المعلوماتية (صفحات 64–85).</p>
+      <ul class="rules">
+        <li><span class="ic">15</span><span><b>15 سؤالًا</b> تزداد صعوبتها، تُختار عشوائيًا من بنك فيه <b id="bankCount">0</b> سؤالًا من الكتاب.</span></li>
+        <li><span class="ic">3</span><span><b>3 وسائل مساعدة</b>: حذف إجابتين، سؤال الجمهور، اتصال بصديق. كل وسيلة مرة واحدة.</span></li>
+        <li><span class="ic">◆</span><span><b>نقاط أمان</b> عند السؤال 5 (1,000) والسؤال 10 (32,000). يمكنك الانسحاب في أي وقت والاحتفاظ بما ربحت.</span></li>
+      </ul>
+      <div class="who">
+        <label for="stName">اسم الطالب<input id="stName" type="text" autocomplete="name" maxlength="60" placeholder="اكتب اسمك الثلاثي"></label>
+        <label for="stClass">الصف / الشعبة<select id="stClass"><option value="">اختر صفك</option></select></label>
+        <p class="err" id="nameErr" hidden></p>
+      </div>
+      <div class="opts">
+        <label class="toggle" for="optTimer"><input type="checkbox" id="optTimer" checked> مؤقت (30 ثانية، و45 للأسئلة الصعبة)</label>
+      </div>
+      <button class="btn" id="startBtn" type="button">ابدأ اللعب</button>
+      <p class="best" id="bestLine" hidden>أفضل نتيجة لك: <b id="bestVal">0</b></p>
+    </div>
+    <div class="emblem" aria-hidden="true">
+      <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+      <div class="core"><div class="q">من سيربح<br>المليون؟</div><div class="amt">1,000,000</div></div>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="screenGame" class="game" hidden>
+    <div class="stage">
+      <div class="hud">
+        <div class="lifes">
+          <button class="life" id="lifeFifty" type="button" title="حذف إجابتين" aria-label="حذف إجابتين">50:50</button>
+          <button class="life" id="lifeAud" type="button" title="سؤال الجمهور" aria-label="سؤال الجمهور"><svg viewBox="0 0 24 24"><path d="M4 20V11h3v9H4zm6.5 0V5h3v15h-3zM17 20v-6h3v6h-3z"/></svg></button>
+          <button class="life" id="lifePhone" type="button" title="اتصال بصديق" aria-label="اتصال بصديق"><svg viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg></button>
+        </div>
+        <div class="hud-end">
+          <button class="chip ladderBtn" id="ladderBtn" type="button">سلم الجوائز</button>
+          <button class="chip" id="walkBtn" type="button">انسحب</button>
+          <div class="timer" id="timer"><svg viewBox="0 0 54 54"><circle class="bg" cx="27" cy="27" r="24"/><circle class="fg" id="timerFg" cx="27" cy="27" r="24"/></svg><span id="timerNum">30</span></div>
+        </div>
+      </div>
+
+      <div class="meta"><span class="player" id="playerName"></span><span>السؤال <b id="qNum">1</b> من 15</span><span>القيمة: <b id="qVal">100</b></span><span id="qTier">سهل</span></div>
+
+      <div class="rail"><div class="qbox shape"><div class="in shape"><p id="qtext"></p></div></div></div>
+
+      <div class="answers" id="answers"></div>
+
+      <div class="panel" id="panel" hidden>
+        <button class="x" id="panelX" type="button" aria-label="إغلاق">×</button>
+        <h3 id="panelTitle"></h3>
+        <div id="panelBody"></div>
+      </div>
+
+      <div class="actions">
+        <p class="feedback" id="feedback"></p>
+        <div class="row" id="actRow">
+          <button class="btn" id="finalBtn" type="button" disabled>إجابة نهائية</button>
+          <button class="btn" id="nextBtn" type="button" hidden>السؤال التالي</button>
+        </div>
+        <div class="row" id="walkRow" hidden>
+          <button class="btn danger" id="walkYes" type="button">نعم، انسحب</button>
+          <button class="btn ghost" id="walkNo" type="button">تراجع</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="ladder" id="ladder" aria-label="سلم الجوائز">
+      <h2>سلم الجوائز <button id="ladderX" type="button" aria-label="إغلاق">×</button></h2>
+      <ol id="ladderList"></ol>
+      <p class="note">◆ المبالغ الذهبية مضمونة بعد الوصول إليها.</p>
+    </aside>
+  </section>
+
+  <!-- END -->
+  <section id="screenEnd" class="end" hidden>
+    <h1 id="endTitle"></h1>
+    <div class="won" id="endAmt">0</div>
+    <p class="lead" id="endLead"></p>
+    <p class="sent" id="sentLine" hidden></p>
+    <div class="row">
+      <button class="btn" id="againBtn" type="button">العب مرة أخرى</button>
+      <button class="btn ghost" id="homeBtn" type="button">الصفحة الرئيسية</button>
+    </div>
+    <ul class="review" id="review"></ul>
+  </section>
+</div>
+
+<script>
+/* رابط Google Apps Script (تطبيق ويب) الذي يستقبل النتائج ويضيفها إلى جدول Google.
+   اتركه فارغًا لإيقاف الإرسال. */
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbz4FgVMRL7bTErho6D2ItBJ3JIsZS7-r-5LCtXWL_g75d9CsFvgmuvO4kRBnuexHNFgmQ/exec';
+
+/* قائمة الصفوف التي يختار منها الطالب */
+const CLASSES = ['7/5','7/6','7/7'];
+
+/* بنك الأسئلة: [السؤال، الإجابة الصحيحة، خطأ، خطأ، خطأ، رقم الصفحة] */
+const BANK = {
+1: [
+ ['ما الرسوم المعلوماتية (Infographics)؟','تمثيل بصري للمعلومات أو البيانات باستخدام النصوص والصور والأيقونات والمخططات','برنامج لتحرير مقاطع الفيديو','لغة برمجة لتصميم المواقع','نوع من قواعد البيانات',66],
+ ['ما التطبيق الذي استُخدم في الدرس لتصميم الرسم المعلوماتي؟','Canva (كانفا)','Microsoft Excel','Paint (الرسام)','Notepad (المفكرة)',71],
+ ['ما التطبيق الذي نفتح به الصورة لتعديلها في درس «هل تذكر؟»؟','Microsoft Photos (صور)','Microsoft Word','Canva (كانفا)','PowerPoint',64],
+ ['ما وظيفة أداة Crop (قص) عند تعديل صورة؟','اقتصاص أجزاء من الصورة','تغيير اتجاه الصورة','إزالة العناصر غير المرغوب فيها','تحويل الصورة إلى أبيض وأسود',64],
+ ['نستخدم أداة Rotate (تدوير) من أجل:','تغيير اتجاه الصورة','اقتصاص أجزاء من الصورة','ضبط سطوع الصورة','حفظ نسخة جديدة من الصورة',64],
+ ['ما الأداة المناسبة لإزالة العناصر غير المرغوب فيها من الصورة؟','Erase (مسح)','Crop (قص)','Filter (تصفية)','Rotate (تدوير)',64],
+ ['بعد تحديد عنصر في Canva، ما المفتاح الذي نضغطه لحذفه؟','Delete','Enter','Shift','Tab',74],
+ ['ما موضوع الرسم المعلوماتي الذي صممناه في كانفا كمثال في الدرس؟','المواطنة الرقمية','التغير المناخي','تاريخ الحاسوب','فوائد الرياضة',71],
+ ['من الجمهور المستهدف في مثال الرسم المعلوماتي عن المواطنة الرقمية؟','الطلبة','المعلمون','أولياء الأمور','المبرمجون',71],
+ ['ما الزر الذي ننقره لمشاركة التصميم مع الآخرين في Canva؟','Share (مشاركة)','Resize (تغيير الحجم)','Notes (ملحوظات)','Timer (مؤقت)',84],
+ ['ما الخيار في الشريط الجانبي لـ Canva الذي نستخدمه لإضافة نصوص؟','Text','Uploads','Projects','Apps',74],
+ ['ماذا يفعل خيار Save (حفظ) في تطبيق الصور؟','يحدّث الصورة نفسها بالتعديلات','ينشئ صورة جديدة دون تغيير الأصلية','ينسخ الصورة إلى الحافظة','يلغي التعديلات كلها',65],
+ ['لإنشاء صورة جديدة دون تغيير الصورة الأصلية نختار:','Save as copy (حفظ كنسخة)','Save (حفظ)','Cancel (إلغاء)','Reset (إعادة تعيين)',65],
+ ['أي مما يلي يُعدّ من أنواع الرسوم المعلوماتية؟','المخطط الزمني (Timeline Chart)','جدول الضرب','الرسالة النصية','كلمة المرور',67],
+ ['ماذا تعني كلمة Brightness في قائمة Adjustment (تعديل)؟','السطوع','التباين','التشبع','الظلال',65],
+ ['لماذا يُعدّ Canva مناسبًا لإنشاء الرسوم المعلوماتية؟','لأنه تطبيق تصميم سهل يوفّر قوالب جاهزة وأيقونات ومخططات','لأنه يعمل على الهواتف فقط','لأنه مخصص لكتابة الأكواد البرمجية','لأنه يحرّر الملفات الصوتية فقط',71]
+],
+2: [
+ ['أي نوع من المخططات يعرض الأحداث بترتيب زمني لتتبّع تطور حدث بمرور الزمن؟','المخطط الزمني (Timeline Chart)','مخطط المقارنة','مخطط الخريطة','المخطط المعلوماتي',67],
+ ['المخطط الذي يتكوّن أساسًا من نص يسرد معلومات حول موضوع على هيئة قائمة بصرية هو:','المخطط المعلوماتي (Informational/List Chart)','المخطط الانسيابي','مخطط العملية','المخطط الزمني',67],
+ ['ما المخطط الذي يعرض تمثيلًا بصريًا للإجراءات والخطوات الرئيسة لأي عملية؟','مخطط العملية (Process Chart)','مخطط الخريطة','مخطط المقارنة','المخطط المعلوماتي',68],
+ ['المخطط الذي يوضّح الاختلافات بين الحاسوب المحمول والجهاز اللوحي هو:','مخطط المقارنة (Comparison Chart)','المخطط الزمني','المخطط الانسيابي','مخطط الخريطة',68],
+ ['ما المخطط الأمثل لمقارنة الأماكن والثقافات من خلال بيانات تركّز على الموقع؟','مخطط الخريطة أو الموقع (Map/Location Chart)','مخطط العملية','المخطط المعلوماتي','مخطط المقارنة',69],
+ ['مثال «استعارة كتاب من مركز مصادر التعلم» بخطواته وأسئلته (نعم / لا) يمثّل:','المخطط الانسيابي (Flowchart)','المخطط الزمني','مخطط الخريطة','المخطط المعلوماتي',69],
+ ['ما المرحلة الأولى في مراحل تصميم الرسوم المعلوماتية؟','اختيار الموضوع','التصميم','جمع البيانات','المراجعة والمشاركة',70],
+ ['ما الكلمات التي كتبناها في شريط البحث للعثور على القالب في Canva؟','online safety infographic','digital citizenship','computer history','free poster',73],
+ ['ما الخيار في Canva الذي ينشئ الصور والوسائط باستخدام أدوات الذكاء الاصطناعي؟','Magic Media','Brand','Projects','Uploads',74],
+ ['لإضافة صور من جهازك إلى التصميم في Canva ننقر Uploads ثم:','Upload files (تحميل الملفات)','Record yourself','Templates','Resize',80],
+ ['ما فائدة خيار Text direction (اتجاه النص)؟','كتابة النص من اليسار إلى اليمين أو العكس','تغيير لون النص','تكبير حجم الخط','إضافة تأثيرات للنص',78],
+ ['أي أداة تُستخدم لتحريك عنصر وتغيير موضعه على الصفحة في Canva؟','Move (التحريك)','Rotate (التدوير)','Crop (القص)','Flip (القلب)',78],
+ ['لماذا تُحفظ تعديلاتك في Canva تلقائيًا ويمكنك فتحها من أجهزة مختلفة؟','لأن Canva يستخدم التخزين السحابي','لأنه يحفظها على ذاكرة USB','لأنه يرسلها بالبريد تلقائيًا','لأنه يطبعها بعد كل تعديل',82],
+ ['ماذا يفعل الفلتر B&W Warm في تطبيق الصور؟','يحوّل الصورة إلى أبيض وأسود بلمسة دافئة','يزيد سطوع الصورة فقط','يقص أطراف الصورة','يدير الصورة 90 درجة',64],
+ ['أي مما يلي ليس من أشرطة التمرير في قائمة Adjustment (تعديل)؟','Crop (قص)','Contrast (التباين)','Saturation (التشبع)','Warmth (الدفء)',65],
+ ['لفتح رسم معلوماتي محفوظ سابقًا في Canva ننقر من الصفحة الرئيسية على:','Projects (المشاريع)','Templates (القوالب)','Create (إنشاء)','Classwork',85],
+ ['ما وظيفة زر Collapse (اطوِ) في Canva؟','إخفاء الشريط الجانبي','حذف التصميم','طي الصفحة للطباعة','تصغير الصورة',80],
+ ['لإزالة تأثيرات التنسيق عن نص في Canva ننقر Effects ثم:','Remove effect (أزل تأثيرًا واحدًا)','Animate','Position','Flip',77]
+],
+3: [
+ ['خاصية الرسوم المعلوماتية التي تعني «عرض المعلومات بتسلسل سهل الفهم يتضمن الإحصائيات والمراجع والحقائق والجداول الزمنية» هي:','الكفاءة والدقة','التوازن','الجاذبية والفعالية','البساطة والوضوح',66],
+ ['تحقيق التوازن بين كمية المعلومات وتصميم الرسوم البيانية لإيصال الرسالة الصحيحة يُسمّى خاصية:','التوازن','الكفاءة والدقة','البساطة والوضوح','الجاذبية والفعالية',66],
+ ['«تقديم المعلومات بأسلوب موجز وتصميم مبسط يجذب الانتباه بمجرد النظر إليه» يصف خاصية:','الجاذبية والفعالية','البساطة والوضوح','التوازن','الكفاءة والدقة',66],
+ ['في مراحل تصميم الرسوم المعلوماتية، ما المرحلة التي تأتي مباشرة بعد «تحديد الأهداف»؟','جمع البيانات','تحديد الجمهور','التصميم','اختيار الموضوع',70],
+ ['تتضمن مرحلة جمع البيانات مهمتين رئيستين، هما:','جمع المعلومات من مصادر متنوعة، ثم فرزها لاختيار الأكثر فائدة وموثوقية','اختيار الألوان، ثم اختيار الخطوط','نشر التصميم، ثم طباعته','تحديد الجمهور، ثم تحديد الأهداف',70],
+ ['على أي أساس يُختار المحتوى في مرحلة «تحديد الجمهور»؟','مستوى المعرفة المسبقة لدى الجمهور وملاءمته لفئتهم العمرية','عدد الصور المتوفرة','حجم الملف النهائي','نوع الحاسوب المستخدم',70],
+ ['أي مما يلي ليس من أدوات تصميم الرسوم المعلوماتية التي ذكرها الدرس؟','Microsoft Excel','Canva (كانفا)','Piktochart (بيكتوشارت)','Visme (فيزمي)',70],
+ ['ما نوع الملف الذي اخترناه في الدرس عند تنزيل الرسم المعلوماتي من Canva؟','PDF Print','MP4 Video','GIF','PPTX',83],
+ ['لماذا يُعدّ تنسيق PDF من أكثر التنسيقات استخدامًا؟','لأنه متوافق مع معظم الأجهزة ويمكن تحريره ببعض تطبيقات الرسم وتحرير الصور','لأنه يحتوي على صوت وفيديو','لأن حجمه أصغر من كل التنسيقات دائمًا','لأنه لا يُفتح إلا في Canva',84],
+ ['نختار PNG للحصول على جودة أعلى، أما للحصول على حجم ملف أصغر ومشاركته بسهولة فنختار:','JPG','PDF Print','SVG','PPTX',84],
+ ['ما اسم القالب الذي اخترناه في Canva لتصميم الرسم المعلوماتي؟','Blue and Purple Illustrated Online Safety Infographic','Be Cyber Smart Poster','Stay Safe Online Presentation','Digital Safety Tips for Teens',73],
+ ['في المخطط الزمني لتاريخ تطور الحاسوب، ماذا تمثّل الفترة 1970–1990؟','أجهزة الحاسوب الشخصية','أجهزة الحاسوب الأولى','الإنترنت وأجهزة الحاسوب الحديثة','الأجهزة المحمولة والذكية',67],
+ ['في مخطط العملية «خطوات إنشاء رسم معلوماتي»، ما الخطوة الخامسة؟','راجع وحسّن','شارك الرسم المعلوماتي الخاص بك','ابحث واجمع البيانات','خطّط لتصميمك',68],
+ ['أي مما يلي ليس من أهداف الرسوم المعلوماتية؟','تشفير البيانات لحمايتها من الاختراق','توضيح الأفكار وتبسيط كمية كبيرة من المعلومات','توضيح العلاقات بين البيانات وكيفية ترابطها','إظهار العوامل المؤثرة في تغيّر البيانات على مدار فترة زمنية',66],
+ ['أي معيار لم يُستخدم في مخطط المقارنة بين الحاسوب المحمول والجهاز اللوحي؟','حجم الشاشة','عمر البطارية','وزن الجهاز','ذاكرة الوصول العشوائي (RAM)',68],
+ ['في قسم Uploads في Canva، الخيار «Drop content here or connect an app» يسمح بـ:','ربط تطبيقات مثل Google Drive أو Dropbox لإضافة ملفاتك بسهولة','تسجيل فيديو لنفسك','إنشاء قالب جديد','إرسال التصميم إلى المعلم',80],
+ ['في مثال الكتاب، ما الهدف من الرسم المعلوماتي عن المواطنة الرقمية؟','التوعية بالاستخدام الآمن للإنترنت','تعليم البرمجة','بيع الأجهزة الذكية','شرح تاريخ الحاسوب',71],
+ ['ما المهمتان الرئيستان في مرحلة «التصميم»؟','تخطيط التصميم وتطويره، واختيار أدوات التصميم المناسبة','جمع المعلومات وفرزها','مراجعة التصميم ومشاركته بالبريد','تحديد الجمهور وتحديد الأهداف',70],
+ ['ما امتداد حساب مايكروسوفت الوزاري الذي نسجّل به الدخول إلى Canva؟','@std.moe.om','@gmail.com','@canva.com','@moe.edu',71]
+]};
+
+const L = ['أ','ب','ج','د'];
+const PRIZES = [100,200,300,500,1000,2000,4000,8000,16000,32000,64000,125000,250000,500000,1000000];
+const SAFE = new Set([4,9]);
+const TIERS = {1:'سهل',2:'متوسط',3:'صعب'};
+const FRIENDS = ['أحمد','مريم','سالم','فاطمة','خالد','عائشة','يوسف','زينب'];
+const fmt = n => n.toLocaleString('en-US');
+const $ = s => document.querySelector(s);
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function build(raw,tier){const [q,c,...rest]=raw;const page=rest.pop();const opts=shuffle([c,...rest]);return {q,opts,correct:opts.indexOf(c),page,tier}}
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+
+let S = {qs:[],i:0,used:{f:false,a:false,p:false},removed:[],sel:null,locked:false,history:[],timerOn:true,sound:true,screen:'start'};
+
+/* ---------- sound (Web Audio, offline) ---------- */
+let ctx=null;
+function ac(){if(!ctx){try{ctx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){ctx=null}}if(ctx&&ctx.state==='suspended')ctx.resume();return ctx}
+function tone(f,d,type='sine',when=0,vol=.14){
+  if(!S.sound)return;const c=ac();if(!c)return;
+  const o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.value=f;
+  const s=c.currentTime+when;g.gain.setValueAtTime(0,s);g.gain.linearRampToValueAtTime(vol,s+.02);g.gain.exponentialRampToValueAtTime(.001,s+d);
+  o.connect(g);g.connect(c.destination);o.start(s);o.stop(s+d+.05);
+}
+const SFX={
+  start(){[392,523,659,784].forEach((f,i)=>tone(f,.4,'triangle',i*.12))},
+  pick(){tone(520,.08,'sine',0,.08)},
+  suspense(){[98,98,98,110].forEach((f,i)=>tone(f,.28,'square',i*.38,.05))},
+  win(){[523,659,784,1047].forEach((f,i)=>tone(f,.4,'triangle',i*.1))},
+  lose(){tone(233,.5,'sawtooth',0,.09);tone(175,.9,'sawtooth',.3,.09)},
+  tick(){tone(900,.05,'square',0,.04)},
+  life(){tone(660,.12,'sine',0,.08);tone(880,.15,'sine',.1,.08)},
+  million(){[523,659,784,1047,784,1047,1319].forEach((f,i)=>tone(f,.45,'triangle',i*.14,.12))}
+};
+
+/* ---------- elements ---------- */
+const ansWrap=$('#answers');
+const ansBtns=L.map((l,k)=>{const b=document.createElement('button');b.type='button';b.className='ans shape';b.innerHTML='<span class="in shape"><span class="k">'+l+':</span><span class="t"></span></span>';b.addEventListener('click',()=>select(k));ansWrap.appendChild(b);return b});
+
+function show(screen){S.screen=screen;$('#screenStart').hidden=screen!=='start';$('#screenGame').hidden=screen!=='game';$('#screenEnd').hidden=screen!=='end';window.scrollTo(0,0)}
+
+function renderBest(){const b=+store('mil-best')||0;$('#bestLine').hidden=!b;$('#bestVal').textContent=fmt(b)}
+
+/* ---------- game flow ---------- */
+function newGame(){
+  S.qs=[...shuffle(BANK[1]).slice(0,5).map(r=>build(r,1)),...shuffle(BANK[2]).slice(0,5).map(r=>build(r,2)),...shuffle(BANK[3]).slice(0,5).map(r=>build(r,3))];
+  S.i=0;S.used={f:false,a:false,p:false};S.history=[];S.timerOn=$('#optTimer').checked;
+  S.player=$('#stName').value.trim();S.cls=$('#stClass').value.trim();S.t0=Date.now();
+  $('#playerName').textContent=S.player;
+  show('game');SFX.start();renderQ();
+}
+const cur=()=>S.qs[S.i];
+
+function renderLadder(){
+  const ol=$('#ladderList');ol.innerHTML='';
+  for(let k=14;k>=0;k--){
+    const li=document.createElement('li');
+    li.className=(SAFE.has(k)||k===14?'safe ':'')+(k<S.i?'done ':'')+(k===S.i&&S.screen==='game'?'cur':'');
+    li.innerHTML='<span class="n">'+(k+1)+'</span><span class="d"></span><span class="v">'+fmt(PRIZES[k])+'</span>';
+    ol.appendChild(li);
+  }
+}
+
+function renderQ(){
+  const Q=cur();
+  $('#qNum').textContent=S.i+1;$('#qVal').textContent=fmt(PRIZES[S.i]);$('#qTier').textContent='المستوى: '+TIERS[Q.tier];
+  $('#qtext').textContent=Q.q;
+  ansBtns.forEach((b,k)=>{b.className='ans shape';b.disabled=false;b.querySelector('.t').textContent=Q.opts[k]});
+  S.sel=null;S.locked=false;S.removed=[];
+  $('#panel').hidden=true;$('#feedback').textContent='';$('#feedback').className='feedback';
+  $('#finalBtn').hidden=false;$('#finalBtn').disabled=true;$('#finalBtn').textContent='اختر إجابة';
+  $('#nextBtn').hidden=true;$('#walkRow').hidden=true;$('#actRow').hidden=false;
+  $('#walkBtn').disabled=false;
+  setLifes();renderLadder();startTimer();
+}
+
+function setLifes(){
+  [['f','#lifeFifty'],['a','#lifeAud'],['p','#lifePhone']].forEach(([k,id])=>{const b=$(id);b.classList.toggle('used',S.used[k]);b.disabled=S.used[k]||S.locked});
+}
+
+function select(k){
+  if(S.locked||S.removed.includes(k))return;
+  S.sel=k;SFX.pick();
+  ansBtns.forEach((b,j)=>b.classList.toggle('sel',j===k));
+  const f=$('#finalBtn');f.disabled=false;f.textContent='إجابة نهائية: ('+L[k]+')';
+}
+
+function lock(){S.locked=true;ansBtns.forEach(b=>b.disabled=true);$('#walkBtn').disabled=true;setLifes();stopTimer()}
+
+function finalAnswer(){
+  if(S.sel==null||S.locked)return;
+  lock();$('#finalBtn').hidden=true;$('#walkRow').hidden=true;
+  $('#feedback').className='feedback';$('#feedback').textContent='لنرَ…';
+  SFX.suspense();
+  setTimeout(()=>reveal(S.sel),reduced?250:1600);
+}
+
+function guaranteed(){return S.i>=10?PRIZES[9]:S.i>=5?PRIZES[4]:0}
+
+function markCorrect(){const b=ansBtns[cur().correct];b.classList.remove('sel','gone');b.classList.add('ok','flash')}
+
+function reveal(k,why){
+  const Q=cur();const ok=k===Q.correct;
+  markCorrect();
+  if(!ok&&k!=null){ansBtns[k].classList.remove('sel');ansBtns[k].classList.add('bad')}
+  S.history.push({q:Q.q,picked:k==null?null:Q.opts[k],correct:Q.opts[Q.correct],ok,page:Q.page,walk:why==='walk'});
+  const fb=$('#feedback'),nb=$('#nextBtn');
+  if(ok){
+    SFX.win();fb.className='feedback good';
+    if(S.i===14){fb.innerHTML='إجابة صحيحة! لقد ربحت المليون!';nb.textContent='استلم المليون';nb.onclick=()=>end('win')}
+    else{fb.innerHTML='إجابة صحيحة! ربحت '+fmt(PRIZES[S.i])+(SAFE.has(S.i)?'<small>هذا المبلغ أصبح مضمونًا لك.</small>':'');nb.textContent='السؤال التالي';nb.onclick=next}
+  }else{
+    fb.className='feedback bad';
+    const ans='<small>الإجابة الصحيحة: ('+L[Q.correct]+') '+esc(Q.opts[Q.correct])+' — صفحة '+Q.page+'</small>';
+    if(why==='walk'){fb.className='feedback';fb.innerHTML='انسحبت بمبلغ '+fmt(S.i>0?PRIZES[S.i-1]:0)+ans;nb.onclick=()=>end('walk')}
+    else{SFX.lose();fb.innerHTML=(why==='time'?'انتهى الوقت!':'إجابة خاطئة.')+ans;nb.onclick=()=>end('lose')}
+    nb.textContent='عرض النتيجة';
+  }
+  nb.hidden=false;$('#actRow').hidden=false;nb.focus({preventScroll:true});
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+function next(){S.i++;renderQ()}
+
+function walkAsk(){
+  if(S.locked)return;
+  $('#walkYes').textContent='نعم، انسحب بـ '+fmt(S.i>0?PRIZES[S.i-1]:0);
+  $('#actRow').hidden=true;$('#walkRow').hidden=false;
+  $('#feedback').className='feedback';$('#feedback').textContent='هل تريد الانسحاب والاحتفاظ بما ربحت؟';
+}
+function walkCancel(){$('#walkRow').hidden=true;$('#actRow').hidden=false;$('#feedback').textContent=''}
+function walkDo(){lock();$('#walkRow').hidden=true;$('#finalBtn').hidden=true;reveal(null,'walk')}
+
+function end(type){
+  let amt=type==='win'?1000000:type==='walk'?(S.i>0?PRIZES[S.i-1]:0):guaranteed();
+  const right=S.history.filter(h=>h.ok).length;
+  $('#endTitle').textContent=type==='win'?'مبروك! أنت مليونير الرسوم المعلوماتية':type==='walk'?'انسحاب ذكي!':amt?'انتهت اللعبة، لكنك لم تخرج خالي اليدين':'انتهت اللعبة';
+  $('#endAmt').textContent=fmt(amt);
+  $('#endLead').textContent='أجبت إجابة صحيحة عن '+right+' من '+S.history.length+' '+(S.history.length>10?'سؤالًا':'أسئلة')+'. راجع الإجابات أدناه مع رقم الصفحة في الكتاب.';
+  const best=+store('mil-best')||0;if(amt>best)store('mil-best',String(amt));
+  const ul=$('#review');ul.innerHTML='';
+  S.history.forEach((h,n)=>{
+    const li=document.createElement('li');
+    const mk=h.ok?'<span class="mk y">✓</span>':h.walk?'<span class="mk w">–</span>':'<span class="mk nn">✗</span>';
+    let a='الصحيح: <b>'+esc(h.correct)+'</b>';
+    if(!h.ok)a=(h.picked?'إجابتك: <s>'+esc(h.picked)+'</s> · ':h.walk?'انسحبت · ':'انتهى الوقت · ')+a;
+    li.innerHTML=mk+'<div><p class="qq">'+(n+1)+'. '+esc(h.q)+'</p><p class="aa">'+a+' · صفحة '+h.page+'</p></div>';
+    ul.appendChild(li);
+  });
+  sendResult({amount:amt,right,type});
+  show('end');renderBest();
+  if(type==='win')SFX.million();
+}
+
+/* ---------- إرسال النتيجة إلى جدول Google ---------- */
+function sendResult({amount,right,type}){
+  const line=$('#sentLine');
+  if(!SHEET_URL){line.hidden=true;return}
+  const labels={win:'ربح المليون',walk:'انسحب',lose:'إجابة خاطئة'};
+  const last=S.history[S.history.length-1];
+  const data={
+    name:S.player,cls:S.cls,amount,correct:right,answered:S.history.length,
+    result:last&&!last.ok&&!last.walk&&last.picked==null?'انتهى الوقت':labels[type],
+    lifelines:['f','a','p'].filter(k=>S.used[k]).length,
+    seconds:Math.round((Date.now()-(S.t0||Date.now()))/1000),
+    wrong:S.history.filter(h=>!h.ok&&!h.walk).map(h=>h.q+' (ص '+h.page+')').join(' | ')
+  };
+  line.hidden=false;line.className='sent';line.textContent='جارٍ إرسال نتيجتك إلى المعلم…';
+  fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(data)})
+    .then(()=>{line.className='sent ok';line.textContent='✓ وصلت نتيجتك إلى المعلم.'})
+    .catch(()=>{line.className='sent no';line.textContent='تعذّر إرسال النتيجة. تأكد من اتصالك بالإنترنت ثم العب مرة أخرى.'});
+}
+
+/* ---------- timer ---------- */
+let tId=null,tLeft=0,tMax=30;
+function startTimer(){
+  stopTimer();const el=$('#timer');el.hidden=!S.timerOn;if(!S.timerOn)return;
+  tMax=S.i<10?30:45;tLeft=tMax;drawTimer();
+  tId=setInterval(()=>{tLeft--;drawTimer();if(tLeft<=5&&tLeft>0)SFX.tick();if(tLeft<=0){timeUp()}},1000);
+}
+function stopTimer(){if(tId){clearInterval(tId);tId=null}}
+function drawTimer(){$('#timerNum').textContent=tLeft;$('#timerFg').style.strokeDashoffset=150.8*(1-tLeft/tMax);$('#timer').classList.toggle('warn',tLeft<=5)}
+function timeUp(){stopTimer();if(S.locked)return;lock();$('#finalBtn').hidden=true;$('#walkRow').hidden=true;$('#actRow').hidden=false;reveal(null,'time')}
+
+/* ---------- lifelines ---------- */
+function avail(){return [0,1,2,3].filter(k=>!S.removed.includes(k))}
+function openPanel(title,html){$('#panelTitle').textContent=title;$('#panelBody').innerHTML=html;$('#panel').hidden=false}
+
+function fifty(){
+  if(S.used.f||S.locked)return;S.used.f=true;SFX.life();
+  const Q=cur();const wrong=shuffle([0,1,2,3].filter(k=>k!==Q.correct)).slice(0,2);
+  S.removed.push(...wrong);
+  wrong.forEach(k=>{const b=ansBtns[k];b.classList.add('gone');b.classList.remove('sel');b.disabled=true});
+  if(wrong.includes(S.sel)){S.sel=null;$('#finalBtn').disabled=true;$('#finalBtn').textContent='اختر إجابة'}
+  setLifes();
+}
+function audience(){
+  if(S.used.a||S.locked)return;S.used.a=true;SFX.life();setLifes();
+  const Q=cur(),av=avail();const r=(a,b)=>a+Math.random()*(b-a);
+  const base={1:r(58,82),2:r(42,64),3:r(30,52)}[Q.tier];
+  let pct=[0,0,0,0];
+  // في الأسئلة الصعبة قد يخطئ الجمهور أحيانًا
+  let fav=Q.correct;if(Q.tier===3&&Math.random()<.2){const o=av.filter(k=>k!==Q.correct);if(o.length)fav=o[Math.random()*o.length|0]}
+  const others=av.filter(k=>k!==fav);
+  pct[fav]=others.length?base:100;
+  const w=others.map(()=>Math.random()+.2),sw=w.reduce((a,b)=>a+b,0);
+  others.forEach((k,j)=>pct[k]=(100-base)*w[j]/sw);
+  pct=pct.map(Math.round);const diff=100-pct.reduce((a,b)=>a+b,0);pct[fav]+=diff;
+  openPanel('رأي الجمهور','<div class="bars">'+pct.map((p,k)=>'<div class="bar"><span class="p">'+p+'%</span><i data-h="'+p+'"></i><span class="l">'+L[k]+'</span></div>').join('')+'</div>');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll('.bar i').forEach(i=>i.style.height=Math.max(2,+i.dataset.h)+'%')));
+}
+function phone(){
+  if(S.used.p||S.locked)return;S.used.p=true;SFX.life();setLifes();
+  const Q=cur(),av=avail();const acc={1:.93,2:.8,3:.62}[Q.tier];
+  let k=Q.correct;if(Math.random()>acc){const o=av.filter(j=>j!==Q.correct);if(o.length)k=o[Math.random()*o.length|0]}
+  const name=FRIENDS[Math.random()*FRIENDS.length|0];
+  const phrase={1:'أنا متأكد تقريبًا',2:'أعتقد',3:'لست متأكدًا تمامًا، لكنني أظن'}[Q.tier];
+  openPanel('اتصال بصديق','<p class="friend">'+name+' يقول: «'+phrase+' أن الإجابة هي <b>('+L[k]+') '+esc(Q.opts[k])+'</b>».</p>');
+}
+
+/* ---------- wiring ---------- */
+$('#startBtn').onclick=()=>{
+  const n=$('#stName'),c=$('#stClass'),err=$('#nameErr');
+  if(!n.value.trim()){err.textContent='اكتب اسمك قبل أن تبدأ.';err.hidden=false;n.focus();return}
+  if(!c.value){err.textContent='اختر صفك من القائمة قبل أن تبدأ.';err.hidden=false;c.focus();return}
+  $('#nameErr').hidden=true;store('mil-name',n.value.trim());store('mil-class',$('#stClass').value.trim());
+  ac();newGame();
+};
+$('#stName').addEventListener('input',()=>$('#nameErr').hidden=true);
+$('#stClass').addEventListener('change',()=>$('#nameErr').hidden=true);
+CLASSES.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;$('#stClass').appendChild(o)});
+$('#againBtn').onclick=newGame;
+$('#homeBtn').onclick=()=>{show('start');renderBest()};
+$('#finalBtn').onclick=finalAnswer;
+$('#walkBtn').onclick=walkAsk;$('#walkNo').onclick=walkCancel;$('#walkYes').onclick=walkDo;
+$('#lifeFifty').onclick=fifty;$('#lifeAud').onclick=audience;$('#lifePhone').onclick=phone;
+$('#panelX').onclick=()=>$('#panel').hidden=true;
+$('#ladderBtn').onclick=()=>$('#ladder').classList.add('open');
+$('#ladderX').onclick=()=>$('#ladder').classList.remove('open');
+$('#ladder').addEventListener('click',e=>{if(e.target.id==='ladder')$('#ladder').classList.remove('open')});
+$('#soundBtn').onclick=()=>{S.sound=!S.sound;const b=$('#soundBtn');b.textContent='الصوت: '+(S.sound?'يعمل':'مغلق');b.setAttribute('aria-pressed',S.sound);store('mil-sound',S.sound?'1':'0')};
+document.addEventListener('keydown',e=>{
+  if(S.screen!=='game')return;
+  const map={'1':0,'2':1,'3':2,'4':3};
+  if(e.key in map){select(map[e.key])}
+  else if(e.key==='Enter'&&document.activeElement===document.body){if(!$('#finalBtn').hidden&&!$('#finalBtn').disabled)finalAnswer();else if(!$('#nextBtn').hidden)$('#nextBtn').click()}
+});
+
+function start(data){
+  $('#bankCount').textContent=BANK[1].length+BANK[2].length+BANK[3].length;
+  if(store('mil-sound')==='0'){S.sound=false;$('#soundBtn').textContent='الصوت: مغلق';$('#soundBtn').setAttribute('aria-pressed','false')}
+  $('#stName').value=store('mil-name')||'';{const sc=store('mil-class');$('#stClass').value=CLASSES.includes(sc)?sc:''}
+  renderBest();
+  if(data&&data.S&&data.S.screen==='game'&&data.S.qs&&data.S.qs.length){
+    S=Object.assign(S,data.S);$('#optTimer').checked=S.timerOn;$('#playerName').textContent=S.player||'';show('game');renderQ();
+  }else show('start');
+}
+window.claude?.hot?.snapshot?.(()=>({S:{qs:S.qs,i:S.i,used:S.used,history:S.history,timerOn:S.timerOn,player:S.player,cls:S.cls,t0:S.t0,sound:S.sound,screen:S.screen}}));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+
+</body>
+</html>
